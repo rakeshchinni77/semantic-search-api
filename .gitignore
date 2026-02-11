@@ -1,0 +1,23 @@
+# Virtual Environment
+venv/
+
+# Python cache
+__pycache__/
+*.pyc
+
+# Environment files
+.env
+
+# Mac/Linux system files
+.DS_Store
+
+# Logs
+
+*.log
+
+# Large model cache
+models/sentence_transformer/*
+
+# IDE
+.vscode/
+.idea/
