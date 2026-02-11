@@ -2,7 +2,8 @@ import os
 import logging
 from typing import List
 
-from fastapi import FastAPI, HTTPException, Depends
+from fastapi import FastAPI, HTTPException, Depends, Request
+from fastapi.responses import JSONResponse
 from pydantic import BaseModel
 from dotenv import load_dotenv
 
@@ -10,10 +11,11 @@ from app.services.search_service import (
     SearchService,
     SearchServiceInitializationError,
     SearchServiceQueryError,
+    SearchServiceResourceNotFoundError,
 )
 
 
-# Environment Setup
+# Load Environment Variables
 
 load_dotenv()
 
@@ -39,30 +41,53 @@ app = FastAPI(
 )
 
 
-
-# Singleton Service Instance
+# Singleton Instance
 
 _search_service_instance: SearchService | None = None
 
 
 def get_search_service() -> SearchService:
-    """
-    Dependency injection for SearchService.
-    Ensures singleton pattern (model/index loaded only once).
-    """
     global _search_service_instance
 
     if _search_service_instance is None:
-        try:
-            _search_service_instance = SearchService()
-        except SearchServiceInitializationError as e:
-            logger.exception("SearchService failed to initialize.")
-            raise HTTPException(
-                status_code=500,
-                detail="Search service initialization failed."
-            )
+        _search_service_instance = SearchService()
 
     return _search_service_instance
+
+
+# Exception Handlers
+
+@app.exception_handler(SearchServiceInitializationError)
+async def initialization_exception_handler(request: Request, exc: SearchServiceInitializationError):
+    return JSONResponse(
+        status_code=500,
+        content={"detail": "Search service initialization failed."}
+    )
+
+
+@app.exception_handler(SearchServiceResourceNotFoundError)
+async def resource_not_found_handler(request: Request, exc: SearchServiceResourceNotFoundError):
+    return JSONResponse(
+        status_code=500,
+        content={"detail": str(exc)}
+    )
+
+
+@app.exception_handler(SearchServiceQueryError)
+async def query_exception_handler(request: Request, exc: SearchServiceQueryError):
+    return JSONResponse(
+        status_code=400,
+        content={"detail": str(exc)}
+    )
+
+
+@app.exception_handler(Exception)
+async def global_exception_handler(request: Request, exc: Exception):
+    logger.exception("Unhandled exception occurred.")
+    return JSONResponse(
+        status_code=500,
+        content={"detail": "Internal server error."}
+    )
 
 
 # Pydantic Models
@@ -77,14 +102,12 @@ class SearchResultItem(BaseModel):
     score: float
 
 
-# Health Endpoint
+# Endpoints
 
 @app.get("/health", status_code=200)
 async def health_check():
     return {"status": "ok"}
 
-
-# Search Endpoint
 
 @app.post(
     "/search",
@@ -101,22 +124,7 @@ async def semantic_search_endpoint(
             detail="Query must not be empty and at least 3 characters long."
         )
 
-    try:
-        results = service.search_documents(
-            query=request.query,
-            top_k=TOP_K_RESULTS
-        )
-        return results
-
-    except SearchServiceQueryError as e:
-        raise HTTPException(
-            status_code=400,
-            detail=str(e)
-        )
-
-    except Exception:
-        logger.exception("Unexpected error during search.")
-        raise HTTPException(
-            status_code=500,
-            detail="Internal server error."
-        )
+    return service.search_documents(
+        query=request.query,
+        top_k=TOP_K_RESULTS
+    )

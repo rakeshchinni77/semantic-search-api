@@ -9,12 +9,7 @@ from sentence_transformers import SentenceTransformer
 from dotenv import load_dotenv
 
 
-# Load Environment Variables
-
 load_dotenv()
-
-
-# Logging Configuration
 
 logger = logging.getLogger(__name__)
 
@@ -29,23 +24,17 @@ class SearchServiceQueryError(Exception):
     """Raised when query processing fails."""
 
 
+class SearchServiceResourceNotFoundError(Exception):
+    """Raised when required resource files are missing."""
+
+
 # Search Service
 
 class SearchService:
-    """
-    Business logic layer for semantic search.
-    Responsible for:
-    - Loading embedding model
-    - Loading FAISS index
-    - Loading document store
-    - Performing similarity search
-    """
 
     def __init__(self):
         try:
             logger.info("Initializing SearchService...")
-
-           # Environment Configuration
 
             self.model_name = os.getenv("MODEL_NAME")
             self.model_cache_dir = os.getenv("MODEL_CACHE_DIR")
@@ -65,9 +54,6 @@ class SearchService:
             self.documents_path = os.path.join(self.data_dir, self.documents_file)
             self.faiss_index_path = os.path.join(self.data_dir, self.faiss_index_file)
 
-            
-            # Load Components
-            
             self.model = self._load_model()
             self.documents = self._load_documents()
             self.index = self._load_faiss_index()
@@ -78,7 +64,9 @@ class SearchService:
             logger.exception("Failed to initialize SearchService.")
             raise SearchServiceInitializationError(str(e))
 
-    # Private Loaders
+    
+    # Loaders
+   
 
     def _load_model(self) -> SentenceTransformer:
         logger.info(f"Loading model: {self.model_name}")
@@ -89,7 +77,7 @@ class SearchService:
 
     def _load_documents(self) -> List[Dict]:
         if not os.path.exists(self.documents_path):
-            raise FileNotFoundError(
+            raise SearchServiceResourceNotFoundError(
                 f"Documents file not found at {self.documents_path}"
             )
 
@@ -101,7 +89,7 @@ class SearchService:
 
     def _load_faiss_index(self) -> faiss.Index:
         if not os.path.exists(self.faiss_index_path):
-            raise FileNotFoundError(
+            raise SearchServiceResourceNotFoundError(
                 f"FAISS index file not found at {self.faiss_index_path}"
             )
 
@@ -113,12 +101,10 @@ class SearchService:
         logger.info(f"Loaded FAISS index with {index.ntotal} vectors.")
         return index
 
-    # Public Search Method
+    # Search
+    
 
     def search_documents(self, query: str, top_k: int) -> List[Dict]:
-        """
-        Perform semantic search against FAISS index.
-        """
 
         if not query or not query.strip():
             raise SearchServiceQueryError("Query must not be empty.")
