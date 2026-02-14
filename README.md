@@ -6,6 +6,22 @@ This project implements a high-performance vector-based search system capable of
 
 ---
 
+## API Demo
+
+### Swagger UI
+
+<p align="center">
+  <img src="docs/swagger-ui.png" alt="Swagger UI" width="900"/>
+</p>
+
+### Semantic Search Response
+
+<p align="center">
+  <img src="docs/search-response.png" alt="Search Response" width="900"/>
+</p>
+
+---
+
 ## Overview
 
 Traditional keyword search systems fail to capture contextual meaning.  
@@ -96,7 +112,7 @@ semantic-search-api/
 ### Step 1: Clone Repository
 
 ```bash
-git clone <your-repo-url>
+git clone "https://github.com/rakeshchinni77/semantic-search-api"
 cd semantic-search-api
 ```
 
